@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRI Taper Plan Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 30px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SRI Taper Plan Calculator</h1>
+    
+    <div class="input-grid">
+        <div class="input-group">
+            <label for="startDose">Starting Dose (mg)</label>
+            <input type="number" id="startDose" placeholder="e.g. 200" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="deltaRO">RO Reduction per Step (%)</label>
+            <input type="number" id="deltaRO" placeholder="e.g. 5" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="emax">Emax (%)</label>
+            <input type="number" id="emax" placeholder="e.g. 92" value="92" step="0.1">
+        </div>
+        <div class="input-group">
+            <label for="ed50">ED50 (mg)</label>
+            <input type="number" id="ed50" placeholder="e.g. 7.72" value="7.72" step="0.01">
+        </div>
+    </div>
+
+    <div id="errorMessage" class="error"></div>
+
+    <button onclick="calculateTaper()">Generate Taper Plan</button>
+
+    <div class="chart-wrapper">
+        <canvas id="concentrationChart"></canvas>
+    </div>
+
+    <h3>Step-by-Step Plan</h3>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Step</th>
+                <th>Dose (mg)</th>
+                <th>RO (%)</th>
+                <th>5-HT Concentration (% of Baseline)</th>
+                <th>Abs. Reduction (Δ 5-HT)</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // --- System Parameters ---
+    // k1 = 5, k2 = 1. Baseline (Occ=0) set to 1. R0 = 6.
+    const K1 = 5.0;
+    const K2 = 1.0;
+    const R0 = 6.0;
+
+    let chartConcentration = null;
+
+    function getRO(dose, emax, ed50) {
+        if (dose <= 0) return 0;
+        return (emax * dose) / (ed50 + dose);
+    }
+
+    function getDose(ro, emax, ed50) {
+        if (ro <= 0) return 0;
+        if (ro >= emax) return Infinity; 
+        return (ed50 * ro) / (emax - ro);
+    }
+
+    function get5HT(roPercent) {
+        let theta = roPercent / 100.0;
+        let denominator = K1 * (1 - theta) + K2;
+        if (denominator <= 0.0001) return 9999; 
+        let concentration = R0 / denominator;
+        return concentration * 100.0; // Return as % of baseline
+    }
+
+    function calculateTaper() {
+        const startDose = parseFloat(document.getElementById('startDose').value);
+        const deltaRO = parseFloat(document.getElementById('deltaRO').value);
+        const emax = parseFloat(document.getElementById('emax').value);
+        const ed50 = parseFloat(document.getElementById('ed50').value);
+        const errorDiv = document.getElementById('errorMessage');
+
+        if (isNaN(startDose) || isNaN(deltaRO) || isNaN(emax) || isNaN(ed50) || startDose <= 0 || deltaRO <= 0) {
+            errorDiv.style.display = 'block';
+            errorDiv.innerText = "Please enter valid positive numbers for all fields.";
+            return;
+        }
+        errorDiv.style.display = 'none';
+
+        // Initialize Data Arrays
+        let stepsData = [];
+        let labels = [];
+        let concentrations = [];
+
+        // Initial State
+        let currentRO = getRO(startDose, emax, ed50);
+        let currentDose = startDose;
+        let current5HT = get5HT(currentRO);
+        
+        let stepCount = 0;
+
+        // Step 0
+        stepsData.push({
+            step: 0,
+            dose: currentDose,
+            ro: currentRO,
+            ht: current5HT,
+            deltaHt: 0 // No reduction at step 0
+        });
+        labels.push(0);
+        concentrations.push(current5HT);
+
+        // Calculation Loop
+        while (currentRO > 0.1) {
+            let previous5HT = current5HT; // Save previous concentration
+            
+            stepCount++;
+            
+            // Calculate target RO
+            let targetRO = stepsData[stepsData.length - 1].ro - deltaRO;
+            if (targetRO < 0) targetRO = 0;
+
+            // Calculate new values
+            let newDose = getDose(targetRO, emax, ed50);
+            let new5HT = get5HT(targetRO);
+            
+            // Calculate Absolute Reduction (Drop in 5-HT units)
+            let drop = previous5HT - new5HT; 
+            // Note: Since 5-HT goes DOWN, (Old - New) is positive drop.
+
+            // Update State
+            currentRO = targetRO;
+            currentDose = newDose;
+            current5HT = new5HT;
+
+            // Store Data
+            stepsData.push({
+                step: stepCount,
+                dose: newDose,
+                ro: currentRO,
+                ht: new5HT,
+                deltaHt: drop
+            });
+            labels.push(stepCount);
+            concentrations.push(new5HT);
+
+            if (stepCount > 200) break; // Safety break
+        }
+
+        // Update Table
+        const tbody = document.querySelector('#resultsTable tbody');
+        tbody.innerHTML = '';
+        
+        stepsData.forEach(data => {
+            let dropText = data.step === 0 ? "-" : data.deltaHt.toFixed(1);
+            let row = `<tr>
+                <td>${data.step}</td>
+                <td>${data.dose.toFixed(2)}</td>
+                <td>${data.ro.toFixed(2)}</td>
+                <td>${data.ht.toFixed(1)}%</td>
+                <td style="color: ${data.deltaHt > 10 ? '#e74c3c' : '#27ae60'}">${dropText}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        // --- Render Chart: Concentration Trajectory ---
+        const ctx1 = document.getElementById('concentrationChart').getContext('2d');
+        if (chartConcentration) chartConcentration.destroy();
+
+        chartConcentration = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '5-HT Concentration (% of Baseline)',
+                    data: concentrations,
+                    borderColor: '#000000',
+                    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#000000',
+                    pointBorderColor: '#000000',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { 
+                        display: true, 
+                        text: 'Serotonin Trajectory',
+                        color: '#000000'
+                    },
+                    legend: {
+                        labels: {
+                            color: '#000000'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: { 
+                            label: (ctx) => `Concentration: ${ctx.parsed.y.toFixed(1)}%` 
+                        }
+                    }
+                },
+                scales: {
+                    x: { 
+                        title: { 
+                            display: true, 
+                            text: 'Step Number',
+                            color: '#000000'
+                        },
+                        ticks: {
+                            color: '#000000'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    y: { 
+                        title: { 
+                            display: true, 
+                            text: '5-HT Concentration (% of Baseline)',
+                            color: '#000000'
+                        },
+                        ticks: {
+                            color: '#000000'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        suggestedMin: 100 
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
