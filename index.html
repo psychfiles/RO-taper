@@ -3,344 +3,1004 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRI Taper Plan Calculator</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>SRI RO Taper Plan Generator</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #f4f4f9;
             color: #333;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
         }
         .container {
-            background-color: white;
+            background: white;
             padding: 30px;
-            border-radius: 12px;
+            border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-            color: #555;
-        }
-        input {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        button {
-            display: block;
+        h1 { margin-top: 0; color: #2c3e50; font-size: 26px; }
+        h2 { font-size: 18px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; color: #2c3e50; margin-top: 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        input[type="number"], select {
             width: 100%;
-            padding: 15px;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        input[type="number"]:disabled { background-color: #f0f0f0; color: #999; cursor: not-allowed; }
+        input[type="number"]:focus, select:focus { border-color: #3498db; outline: none; }
+        .results-box {
+            background: #eef2f7;
+            padding: 18px;
+            border-radius: 6px;
+            border-left: 5px solid #3498db;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+            align-items: center;
+        }
+        .result-val { font-weight: bold; color: #2c3e50; }
+        .highlight { color: #e74c3c; font-weight: bold; }
+        button {
             background-color: #3498db;
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.2s;
-            margin-bottom: 30px;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
+            font-size: 16px;
             width: 100%;
-            max-width: 800px;
-            margin: 0 auto 40px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 20px;
-            background: #fff;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.9em;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f8f9fa;
             font-weight: 600;
+            transition: background 0.2s;
         }
-        tr:hover {
-            background-color: #f1f1f1;
+        button:hover { background-color: #2980b9; }
+        button:active { background-color: #1f618d; transform: translateY(1px); }
+
+        /* Multi-column table */
+        .table-columns { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .table-col { flex: 0 0 auto; }
+        .table-col table {
+            border-collapse: collapse;
+            font-size: 13px;
+            white-space: nowrap;
         }
-        .error {
-            color: #e74c3c;
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: bold;
-            display: none;
+        .table-col th, .table-col td {
+            padding: 7px 10px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
         }
+        .table-col th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .table-col tr:nth-child(even) { background-color: #fcfcfc; }
+        .table-col tr:hover { background-color: #f1f5fb; }
+
+        /* Collapsible plan section */
+        .collapse-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-top: 30px;
+            user-select: none;
+        }
+        .collapse-header:hover { background: #eef2f7; }
+        .collapse-title { font-weight: 600; font-size: 15px; color: #2c3e50; }
+        .collapse-arrow { font-size: 13px; color: #888; transition: transform 0.2s; }
+        .collapse-arrow.open { transform: rotate(180deg); }
+        .collapse-body { margin-top: 16px; }
+
+        /* PDF button */
+        .pdf-btn {
+            background-color: #27ae60;
+            width: auto;
+            padding: 9px 18px;
+            font-size: 14px;
+            margin-top: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pdf-btn:hover { background-color: #219a52; }
+
+        .mode-selector { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .calib-toggle {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+        .radio-label {
+            margin-right: 20px;
+            font-weight: normal;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .radio-label input { margin-right: 6px; }
+        .question-header {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 14px;
+            min-height: 40px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .sub-text { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
+        .error-msg { color: #e74c3c; font-size: 14px; margin-top: 10px; display: none; background: #fdf3f3; padding: 10px; border-radius: 4px; border-left: 4px solid #e74c3c; }
+        .guidance-box {
+            font-size: 14px;
+            color: #444;
+            font-style: italic;
+            background: #fff3cd;
+            padding: 14px;
+            border-left: 5px solid #ffc107;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+        .params-row { display: flex; gap: 20px; }
+        .params-row .input-group { flex: 1; }
+        .references {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Chart styles */
+        .chart-canvas-wrap { position: relative; width: 100%; cursor: crosshair; }
+        .chart-canvas-wrap canvas { display: block; width: 100% !important; }
+        .click-info {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 14px;
+            font-size: 14px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+        }
+        .click-val { font-weight: 700; color: #e74c3c; font-size: 16px; }
+        .chart-hint { font-size: 12px; color: #aaa; text-align: center; margin-top: 8px; font-style: italic; }
+        .fda-label { font-size: 11px; color: #888; text-align: right; margin-top: 6px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>SRI Taper Plan Calculator</h1>
-    
-    <div class="input-grid">
-        <div class="input-group">
-            <label for="startDose">Starting Dose (mg)</label>
-            <input type="number" id="startDose" placeholder="e.g. 200" step="0.1">
+    <h1>SRI Taper Plan Generator</h1>
+    <p style="color:#666; font-size:14px; margin-top:-10px; margin-bottom:0;">Based on consistent SERT receptor occupancy (RO) reductions</p>
+</div>
+
+<!-- SECTION 1: DRUG PARAMETERS -->
+<div class="container">
+    <h2>1. Medication Parameters</h2>
+
+    <div class="mode-selector">
+        <span style="font-weight: 600; font-size: 14px; margin-right: 15px;">Input Mode:</span>
+        <label class="radio-label">
+            <input type="radio" name="inputMode" value="med" checked onchange="toggleInputMode()"> Select Medication
+        </label>
+        <label class="radio-label">
+            <input type="radio" name="inputMode" value="manual" onchange="toggleInputMode()"> Manual Entry
+        </label>
+    </div>
+
+    <div class="grid" style="align-items: start;">
+        <div>
+            <div class="input-group" id="medSelectContainer">
+                <label for="medDropdown">Medication</label>
+                <select id="medDropdown" onchange="updateFromDropdown()"></select>
+            </div>
         </div>
-        <div class="input-group">
-            <label for="deltaRO">RO Reduction per Step (%)</label>
-            <input type="number" id="deltaRO" placeholder="e.g. 5" step="0.1">
+        <div class="params-row">
+            <div class="input-group">
+                <label>Emax (%)</label>
+                <input type="number" id="emax" disabled oninput="updateInstantCalc()">
+            </div>
+            <div class="input-group">
+                <label>ED50 (mg)</label>
+                <input type="number" id="ed50" disabled oninput="updateInstantCalc()">
+            </div>
         </div>
-        <div class="input-group">
-            <label for="emax">Emax (%)</label>
-            <input type="number" id="emax" placeholder="e.g. 92" value="92" step="0.1">
+    </div>
+</div>
+
+<!-- SECTION 2: TAPER GENERATOR -->
+<div class="container">
+    <h2>2. Taper Plan Generator</h2>
+
+    <div class="calib-toggle">
+        <span style="font-weight: 600; font-size: 14px; margin-right: 15px;">Define Step Size By:</span>
+        <label class="radio-label">
+            <input type="radio" name="calibMode" value="dose" checked onchange="toggleCalibMode()">
+            Past Tolerated Dose
+        </label>
+        <label class="radio-label">
+            <input type="radio" name="calibMode" value="percent" onchange="toggleCalibMode()">
+            Target RO Reduction
+        </label>
+    </div>
+
+    <p class="question-header" id="dynamicHeader">
+        Enter your current starting dose and the first dose reduction that was previously tolerated without significant withdrawal symptoms.
+    </p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1.5fr; align-items: start;">
+        <div>
+            <div class="input-group">
+                <label>Starting Dose (mg)</label>
+                <input type="number" id="startDose" value="100" step="1" oninput="updateInstantCalc()">
+            </div>
+
+            <div class="input-group" id="groupNextDose">
+                <label>Tolerated Next Dose (mg)</label>
+                <input type="number" id="nextDose" value="75" step="1" oninput="updateInstantCalc()">
+            </div>
+
+            <div class="input-group" id="groupRoDrop" style="display:none;">
+                <label>Desired RO Reduction (percentage points)</label>
+                <input type="number" id="desiredRoDrop" value="5" step="0.5" min="0.1" oninput="updateInstantCalc()">
+                <div class="sub-text">e.g. 5 = drop from 80% RO to 75% RO</div>
+            </div>
+
+            <button onclick="generatePlan()" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">Calculate &amp; Generate Plan</button>
+            <div id="errorBox" class="error-msg"></div>
         </div>
-        <div class="input-group">
-            <label for="ed50">ED50 (mg)</label>
-            <input type="number" id="ed50" placeholder="e.g. 7.72" value="7.72" step="0.01">
+
+        <div class="results-box" id="previewBox">
+            <div class="result-row">
+                <span>Starting Dose RO:</span>
+                <span class="result-val" id="dispStartRO">–</span>
+            </div>
+            <div class="result-row" id="nextRORow">
+                <span>Next Dose RO:</span>
+                <span class="result-val" id="dispNextRO">–</span>
+            </div>
+            <div class="result-row" id="calcDoseRow" style="display:none;">
+                <span>Implied Next Dose:</span>
+                <span class="result-val highlight" id="dispCalcDose">–</span>
+            </div>
+            <hr style="border-top:1px solid #c8d3e0; border-bottom:none; margin: 8px 0;">
+            <div class="result-row" style="font-size: 1.05em;">
+                <span id="previewLabel">Absolute RO Drop per Step:</span>
+                <span class="result-val highlight" id="dispDropMetric">–</span>
+            </div>
+            <div class="sub-text" id="previewSubText">This is the constant RO reduction applied at each step.</div>
         </div>
     </div>
 
-    <div id="errorMessage" class="error"></div>
+    <!-- Collapsible plan section -->
+    <div id="planSection" hidden>
+        <div class="collapse-header" onclick="togglePlanSection()">
+            <span class="collapse-title">Generated RO-Based Taper Plan</span>
+            <span class="collapse-arrow open" id="collapseArrow">▲</span>
+        </div>
 
-    <button onclick="calculateTaper()">Generate Taper Plan</button>
+        <div class="collapse-body" id="planBody">
+            <div class="guidance-box">
+                General guidance suggests that each dose reduction should be maintained for at least 2–4 weeks before further reductions<sup>1</sup>. Withdrawal symptoms should either resolve, or be mild, before moving to the next step.
+            </div>
 
-    <div class="chart-wrapper">
-        <canvas id="concentrationChart"></canvas>
+            <!-- Multi-column table rendered here -->
+            <div id="tableColumns" class="table-columns"></div>
+
+            <button class="pdf-btn" onclick="downloadPDF()">⬇ Download PDF</button>
+        </div>
     </div>
 
-    <h3>Step-by-Step Plan</h3>
-    <table id="resultsTable">
-        <thead>
-            <tr>
-                <th>Step</th>
-                <th>Dose (mg)</th>
-                <th>RO (%)</th>
-                <th>5-HT Concentration (% of Baseline)</th>
-                <th>Abs. Reduction (Δ 5-HT)</th>
-            </tr>
-        </thead>
-        <tbody>
-            </tbody>
-    </table>
+    <!-- Taper step chart -->
+    <div style="margin-top: 30px;" id="taperChartWrap" hidden>
+        <div class="chart-canvas-wrap">
+            <canvas id="taperChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 3: DOSE–OCCUPANCY CURVE -->
+<div class="container">
+    <h2>3. Dose–Occupancy Curve</h2>
+
+    <div class="chart-canvas-wrap">
+        <canvas id="roChart"></canvas>
+    </div>
+
+    <div class="click-info" id="clickInfo">
+        <span style="color:#999;">Click anywhere on the curve to read occupancy at that dose.</span>
+        <span></span>
+    </div>
+
+    <div class="chart-hint">▲ Red marker = starting dose &nbsp;|&nbsp; Dashed line = FDA max dose</div>
+    <div class="fda-label" id="fdaLabel"></div>
+</div>
+
+<div class="references">
+    <p><strong>Reference:</strong></p>
+    <p>1. Horowitz, M. A., &amp; Taylor, D. M. (2024). <em>The Maudsley Deprescribing Guidelines: Antidepressants, Benzodiazepines, Gabapentinoids and Z-drugs</em>. Wiley-Blackwell.</p>
 </div>
 
 <script>
-    // --- System Parameters ---
-    // k1 = 5, k2 = 1. Baseline (Occ=0) set to 1. R0 = 6.
-    const K1 = 5.0;
-    const K2 = 1.0;
-    const R0 = 6.0;
+    // ─── MEDICATION DATA ───────────────────────────────────────────────────────
+    const MED_DATA = {
+        'citalopram':    { name: 'Citalopram (Striatum)',        emax: 83.98,  ed50: 2.33,  fdaMax: 40  },
+        'desvenlafaxine':{ name: 'Desvenlafaxine (Striatum)',    emax: 100.22, ed50: 16.11, fdaMax: 100 },
+        'duloxetine':    { name: 'Duloxetine (Thalamus)',        emax: 90.75,  ed50: 6.27,  fdaMax: 120 },
+        'escitalopram':  { name: 'Escitalopram (Dorsal Raphe)',  emax: 89.57,  ed50: 2.72,  fdaMax: 20  },
+        'fluoxetine':    { name: 'Fluoxetine (Striatum)',        emax: 86.12,  ed50: 1.89,  fdaMax: 80  },
+        'paroxetine':    { name: 'Paroxetine (Striatum)',        emax: 97.14,  ed50: 5.60,  fdaMax: 60  },
+        'sertraline':    { name: 'Sertraline (Striatum)',        emax: 92.01,  ed50: 7.72,  fdaMax: 200 },
+        'venlafaxine':   { name: 'Venlafaxine XR (Striatum)',   emax: 90.07,  ed50: 5.80,  fdaMax: 225 },
+        'vortioxetine':  { name: 'Vortioxetine (Raphe Nuclei)', emax: 102.24, ed50: 4.68,  fdaMax: 20  }
+    };
 
-    let chartConcentration = null;
+    // ─── STATE ────────────────────────────────────────────────────────────────
+    let planRows    = [];   // [{step, dose, ro, roDrop}]
+    let planMeta    = {};   // {medName, startDose, absDropRO}
 
-    function getRO(dose, emax, ed50) {
+    // ─── MATH ─────────────────────────────────────────────────────────────────
+    function getRO(dose) {
+        const emax = parseFloat(document.getElementById('emax').value);
+        const ed50 = parseFloat(document.getElementById('ed50').value);
+        if (isNaN(emax) || isNaN(ed50)) return NaN;
         if (dose <= 0) return 0;
         return (emax * dose) / (ed50 + dose);
     }
 
-    function getDose(ro, emax, ed50) {
-        if (ro <= 0) return 0;
-        if (ro >= emax) return Infinity; 
-        return (ed50 * ro) / (emax - ro);
+    function computeRO(dose, emax, ed50) {
+        if (dose <= 0) return 0;
+        let ro = (emax * dose) / (ed50 + dose);
+        if (ro > emax) ro = emax;
+        if (ro < 0) ro = 0;
+        return ro;
     }
 
-    function get5HT(roPercent) {
-        let theta = roPercent / 100.0;
-        let denominator = K1 * (1 - theta) + K2;
-        if (denominator <= 0.0001) return 9999; 
-        let concentration = R0 / denominator;
-        return concentration * 100.0; // Return as % of baseline
-    }
-
-    function calculateTaper() {
-        const startDose = parseFloat(document.getElementById('startDose').value);
-        const deltaRO = parseFloat(document.getElementById('deltaRO').value);
+    function getDoseFromRO(ro) {
         const emax = parseFloat(document.getElementById('emax').value);
         const ed50 = parseFloat(document.getElementById('ed50').value);
-        const errorDiv = document.getElementById('errorMessage');
+        if (ro <= 0) return 0;
+        if (ro >= emax - 0.0001) return Infinity;
+        return (ro * ed50) / (emax - ro);
+    }
 
-        if (isNaN(startDose) || isNaN(deltaRO) || isNaN(emax) || isNaN(ed50) || startDose <= 0 || deltaRO <= 0) {
-            errorDiv.style.display = 'block';
-            errorDiv.innerText = "Please enter valid positive numbers for all fields.";
+    // ─── CANVAS UTILITIES ──────────────────────────────────────────────────────
+    function toPixelInState(dose, ro, state) {
+        const px = state.margin.left + (dose / state.xMax) * state.plotW;
+        const py = state.margin.top  + (1 - ro / 100) * state.plotH;
+        return { px, py };
+    }
+
+    function toDoseFromPixel(cssX, state) {
+        return ((cssX - state.margin.left) / state.plotW) * state.xMax;
+    }
+
+    // ─── DOSE–OCCUPANCY CURVE ──────────────────────────────────────────────────
+    const roCanvas  = document.getElementById('roChart');
+    const roCtx     = roCanvas.getContext('2d');
+    const clickInfo = document.getElementById('clickInfo');
+    const fdaLabel  = document.getElementById('fdaLabel');
+
+    let doseOccState    = null;
+    let lastClickedDose = null;
+
+    function drawDoseOccCurve(emax, ed50, currentDose, fdaMax, clickedDose) {
+        const xMax = fdaMax * 2;
+        const dpr  = window.devicePixelRatio || 1;
+        const cssW = roCanvas.parentElement.clientWidth;
+        const cssH = 300;
+        roCanvas.width  = cssW * dpr;
+        roCanvas.height = cssH * dpr;
+        roCanvas.style.height = cssH + 'px';
+        roCtx.scale(dpr, dpr);
+
+        const margin = { top: 28, right: 22, bottom: 48, left: 58 };
+        const plotW  = cssW - margin.left - margin.right;
+        const plotH  = cssH - margin.top  - margin.bottom;
+        doseOccState = { emax, ed50, xMax, fdaMax, margin, plotW, plotH };
+
+        roCtx.clearRect(0, 0, cssW, cssH);
+        roCtx.fillStyle = '#fff';
+        roCtx.fillRect(0, 0, cssW, cssH);
+
+        const xTicks = [];
+        for (let v = 0; v <= xMax + 0.001; v += 25) xTicks.push(Math.round(v));
+        const labelEvery = xTicks.length > 10 ? 2 : 1;
+        const yTicks = [0, 20, 40, 60, 80, 100];
+
+        roCtx.strokeStyle = 'rgba(0,0,0,0.07)';
+        roCtx.lineWidth = 1;
+        for (const v of xTicks) {
+            const { px } = toPixelInState(v, 0, doseOccState);
+            roCtx.beginPath(); roCtx.moveTo(px, margin.top); roCtx.lineTo(px, margin.top + plotH); roCtx.stroke();
+        }
+        for (const v of yTicks) {
+            const { py } = toPixelInState(0, v, doseOccState);
+            roCtx.beginPath(); roCtx.moveTo(margin.left, py); roCtx.lineTo(margin.left + plotW, py); roCtx.stroke();
+        }
+
+        roCtx.strokeStyle = '#ccc';
+        roCtx.lineWidth = 1.5;
+        roCtx.strokeRect(margin.left, margin.top, plotW, plotH);
+
+        roCtx.fillStyle = '#555';
+        roCtx.font = '12px sans-serif';
+        roCtx.textAlign = 'center';
+        roCtx.textBaseline = 'top';
+        roCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+        roCtx.lineWidth = 1;
+        xTicks.forEach((v, i) => {
+            const { px } = toPixelInState(v, 0, doseOccState);
+            roCtx.beginPath(); roCtx.moveTo(px, margin.top + plotH); roCtx.lineTo(px, margin.top + plotH + 4); roCtx.stroke();
+            if (i % labelEvery === 0) roCtx.fillText(v, px, margin.top + plotH + 7);
+        });
+
+        roCtx.textAlign = 'right';
+        roCtx.textBaseline = 'middle';
+        for (const v of yTicks) {
+            const { py } = toPixelInState(0, v, doseOccState);
+            roCtx.fillText(v + '%', margin.left - 8, py);
+        }
+
+        roCtx.fillStyle = '#555';
+        roCtx.font = '13px sans-serif';
+        roCtx.textAlign = 'center';
+        roCtx.textBaseline = 'bottom';
+        roCtx.fillText('Dose (mg)', margin.left + plotW / 2, cssH - 2);
+        roCtx.save();
+        roCtx.translate(11, margin.top + plotH / 2);
+        roCtx.rotate(-Math.PI / 2);
+        roCtx.textAlign = 'center';
+        roCtx.textBaseline = 'top';
+        roCtx.fillText('SERT Occupancy (%)', 0, 0);
+        roCtx.restore();
+
+        const fdaPx = toPixelInState(fdaMax, 0, doseOccState).px;
+        roCtx.save();
+        roCtx.setLineDash([6, 4]);
+        roCtx.strokeStyle = 'rgba(52,152,219,0.65)';
+        roCtx.lineWidth = 1.5;
+        roCtx.beginPath(); roCtx.moveTo(fdaPx, margin.top); roCtx.lineTo(fdaPx, margin.top + plotH); roCtx.stroke();
+        roCtx.restore();
+        roCtx.fillStyle = 'rgba(52,152,219,0.85)';
+        roCtx.font = '11px sans-serif';
+        roCtx.textAlign = 'center';
+        roCtx.textBaseline = 'bottom';
+        roCtx.fillText('FDA max', fdaPx, margin.top - 2);
+
+        const nPts = 500;
+        roCtx.beginPath();
+        for (let i = 0; i <= nPts; i++) {
+            const dose = (xMax * i) / nPts;
+            const ro   = computeRO(dose, emax, ed50);
+            const { px, py } = toPixelInState(dose, ro, doseOccState);
+            i === 0 ? roCtx.moveTo(px, py) : roCtx.lineTo(px, py);
+        }
+        const { px: xEnd, py: yBase } = toPixelInState(xMax, 0, doseOccState);
+        const { px: xStart } = toPixelInState(0, 0, doseOccState);
+        roCtx.lineTo(xEnd, yBase); roCtx.lineTo(xStart, yBase); roCtx.closePath();
+        roCtx.fillStyle = 'rgba(44,62,80,0.06)';
+        roCtx.fill();
+
+        roCtx.beginPath();
+        for (let i = 0; i <= nPts; i++) {
+            const dose = (xMax * i) / nPts;
+            const ro   = computeRO(dose, emax, ed50);
+            const { px, py } = toPixelInState(dose, ro, doseOccState);
+            i === 0 ? roCtx.moveTo(px, py) : roCtx.lineTo(px, py);
+        }
+        roCtx.strokeStyle = '#2c3e50';
+        roCtx.lineWidth = 2.5;
+        roCtx.lineJoin = 'round';
+        roCtx.setLineDash([]);
+        roCtx.stroke();
+
+        if (clickedDose !== null && clickedDose >= 0 && clickedDose <= xMax) {
+            const clickedRO = computeRO(clickedDose, emax, ed50);
+            const { px, py } = toPixelInState(clickedDose, clickedRO, doseOccState);
+            roCtx.beginPath(); roCtx.arc(px, py, 7, 0, Math.PI * 2);
+            roCtx.strokeStyle = '#e74c3c'; roCtx.lineWidth = 2; roCtx.stroke();
+            roCtx.fillStyle = 'rgba(231,76,60,0.15)'; roCtx.fill();
+        }
+
+        if (currentDose >= 0 && currentDose <= xMax) {
+            const curRO = computeRO(currentDose, emax, ed50);
+            const { px, py } = toPixelInState(currentDose, curRO, doseOccState);
+            const s = 10;
+            roCtx.beginPath();
+            roCtx.moveTo(px, py - s); roCtx.lineTo(px + s, py + s); roCtx.lineTo(px - s, py + s);
+            roCtx.closePath();
+            roCtx.fillStyle = '#e74c3c'; roCtx.strokeStyle = '#c0392b'; roCtx.lineWidth = 1.5;
+            roCtx.fill(); roCtx.stroke();
+        }
+
+        // Legend
+        const lx = margin.left + plotW - 8, ly = margin.top + 12;
+        roCtx.beginPath(); roCtx.moveTo(lx - 110, ly); roCtx.lineTo(lx - 90, ly);
+        roCtx.strokeStyle = '#2c3e50'; roCtx.lineWidth = 2.5; roCtx.stroke();
+        roCtx.fillStyle = '#555'; roCtx.font = '11px sans-serif';
+        roCtx.textAlign = 'left'; roCtx.textBaseline = 'middle';
+        roCtx.fillText('Dose–Occ. Curve', lx - 87, ly);
+        const tx = lx - 110, ty = ly + 18;
+        roCtx.beginPath(); roCtx.moveTo(tx + 10, ty - 7); roCtx.lineTo(tx + 18, ty + 5); roCtx.lineTo(tx + 2, ty + 5); roCtx.closePath();
+        roCtx.fillStyle = '#e74c3c'; roCtx.fill();
+        roCtx.fillStyle = '#555'; roCtx.textAlign = 'left';
+        roCtx.fillText('Starting Dose', lx - 87, ty);
+    }
+
+    roCanvas.addEventListener('click', function(e) {
+        if (!doseOccState) return;
+        const rect = roCanvas.getBoundingClientRect();
+        const cssX = e.clientX - rect.left;
+        const cssY = e.clientY - rect.top;
+        const { margin, plotW, plotH } = doseOccState;
+        if (cssX < margin.left || cssX > margin.left + plotW) return;
+        if (cssY < margin.top  || cssY > margin.top  + plotH) return;
+        const clickedDose = toDoseFromPixel(cssX, doseOccState);
+        if (clickedDose < 0) return;
+        lastClickedDose = clickedDose;
+        const emax = parseFloat(document.getElementById('emax').value);
+        const ed50 = parseFloat(document.getElementById('ed50').value);
+        const clickedRO = computeRO(clickedDose, emax, ed50);
+        const startDose = parseFloat(document.getElementById('startDose').value) || 0;
+        drawDoseOccCurve(emax, ed50, startDose, doseOccState.fdaMax, clickedDose);
+        clickInfo.innerHTML = `
+            <span>Dose: <strong>${clickedDose.toFixed(1)} mg</strong></span>
+            <span>SERT Occupancy: <span class="click-val">${clickedRO.toFixed(2)}%</span></span>
+        `;
+    });
+
+    function refreshDoseOccCurve() {
+        const emax = parseFloat(document.getElementById('emax').value);
+        const ed50 = parseFloat(document.getElementById('ed50').value);
+        const startDose = parseFloat(document.getElementById('startDose').value) || 0;
+        if (isNaN(emax) || isNaN(ed50)) return;
+        const selKey = document.getElementById('medDropdown').value;
+        const fdaMax = (MED_DATA[selKey] ? MED_DATA[selKey].fdaMax : null) || (ed50 * 10);
+        fdaLabel.textContent = `FDA max dose: ${fdaMax} mg  |  Chart x-axis extends to 2× FDA max (${fdaMax * 2} mg)`;
+        drawDoseOccCurve(emax, ed50, startDose, fdaMax, lastClickedDose);
+    }
+
+    // ─── TAPER STEP CHART (Canvas 2D) ─────────────────────────────────────────
+    const taperCanvas = document.getElementById('taperChart');
+    const taperCtx    = taperCanvas.getContext('2d');
+
+    function drawTaperChart(labels, data) {
+        document.getElementById('taperChartWrap').hidden = false;
+        const dpr  = window.devicePixelRatio || 1;
+        const cssW = taperCanvas.parentElement.clientWidth;
+        const cssH = 260;
+        taperCanvas.width  = cssW * dpr;
+        taperCanvas.height = cssH * dpr;
+        taperCanvas.style.height = cssH + 'px';
+        taperCtx.scale(dpr, dpr);
+
+        // Wider left margin so y-axis label doesn't crowd tick labels
+        const margin = { top: 20, right: 20, bottom: 48, left: 68 };
+        const plotW  = cssW - margin.left - margin.right;
+        const plotH  = cssH - margin.top  - margin.bottom;
+        const n      = labels.length;
+        const maxRO  = Math.max(...data, 10);
+        const yMax   = Math.ceil(maxRO / 10) * 10;
+
+        taperCtx.clearRect(0, 0, cssW, cssH);
+        taperCtx.fillStyle = '#fff';
+        taperCtx.fillRect(0, 0, cssW, cssH);
+
+        function toPx(step, ro) {
+            const px = margin.left + ((step - 1) / Math.max(n - 1, 1)) * plotW;
+            const py = margin.top  + (1 - ro / yMax) * plotH;
+            return { px, py };
+        }
+
+        // Y grid
+        const yStep = yMax <= 40 ? 5 : yMax <= 60 ? 10 : 20;
+        taperCtx.strokeStyle = 'rgba(0,0,0,0.07)';
+        taperCtx.lineWidth = 1;
+        taperCtx.fillStyle = '#555';
+        taperCtx.font = '12px sans-serif';
+        taperCtx.textAlign = 'right';
+        taperCtx.textBaseline = 'middle';
+        for (let v = 0; v <= yMax; v += yStep) {
+            const { py } = toPx(1, v);
+            taperCtx.beginPath(); taperCtx.moveTo(margin.left, py); taperCtx.lineTo(margin.left + plotW, py); taperCtx.stroke();
+            taperCtx.fillText(v + '%', margin.left - 8, py);
+        }
+
+        // X grid
+        taperCtx.textAlign = 'center';
+        taperCtx.textBaseline = 'top';
+        const xLabelEvery = n > 20 ? Math.ceil(n / 12) : 1;
+        for (let i = 0; i < n; i++) {
+            const { px } = toPx(labels[i], 0);
+            taperCtx.strokeStyle = 'rgba(0,0,0,0.07)';
+            taperCtx.beginPath(); taperCtx.moveTo(px, margin.top); taperCtx.lineTo(px, margin.top + plotH); taperCtx.stroke();
+            taperCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+            taperCtx.beginPath(); taperCtx.moveTo(px, margin.top + plotH); taperCtx.lineTo(px, margin.top + plotH + 4); taperCtx.stroke();
+            if (i % xLabelEvery === 0) taperCtx.fillText(labels[i], px, margin.top + plotH + 7);
+        }
+
+        // Axes border
+        taperCtx.strokeStyle = '#ccc';
+        taperCtx.lineWidth = 1.5;
+        taperCtx.strokeRect(margin.left, margin.top, plotW, plotH);
+
+        // Axis titles
+        taperCtx.fillStyle = '#555';
+        taperCtx.font = '13px sans-serif';
+        taperCtx.textAlign = 'center';
+        taperCtx.textBaseline = 'bottom';
+        taperCtx.fillText('Taper Step', margin.left + plotW / 2, cssH - 2);
+
+        // Y label — placed well clear of tick labels (margin.left = 68, so x=12 gives 56px gap)
+        taperCtx.save();
+        taperCtx.translate(12, margin.top + plotH / 2);
+        taperCtx.rotate(-Math.PI / 2);
+        taperCtx.textAlign = 'center';
+        taperCtx.textBaseline = 'top';
+        taperCtx.fillText('SERT Occupancy (%)', 0, 0);
+        taperCtx.restore();
+
+        // Fill under curve
+        taperCtx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const { px, py } = toPx(labels[i], data[i]);
+            i === 0 ? taperCtx.moveTo(px, py) : taperCtx.lineTo(px, py);
+        }
+        const { px: xLast } = toPx(labels[n - 1], 0);
+        const { px: xFirst, py: yBot } = toPx(labels[0], 0);
+        taperCtx.lineTo(xLast, yBot); taperCtx.lineTo(xFirst, yBot); taperCtx.closePath();
+        taperCtx.fillStyle = 'rgba(52,152,219,0.10)';
+        taperCtx.fill();
+
+        // Line
+        taperCtx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const { px, py } = toPx(labels[i], data[i]);
+            i === 0 ? taperCtx.moveTo(px, py) : taperCtx.lineTo(px, py);
+        }
+        taperCtx.strokeStyle = '#2c3e50';
+        taperCtx.lineWidth = 2;
+        taperCtx.lineJoin = 'round';
+        taperCtx.setLineDash([]);
+        taperCtx.stroke();
+
+        // Dots
+        for (let i = 0; i < n; i++) {
+            const { px, py } = toPx(labels[i], data[i]);
+            taperCtx.beginPath(); taperCtx.arc(px, py, 4, 0, Math.PI * 2);
+            taperCtx.fillStyle = '#2c3e50'; taperCtx.fill();
+        }
+
+        // Legend
+        taperCtx.strokeStyle = '#2c3e50'; taperCtx.lineWidth = 2;
+        taperCtx.beginPath(); taperCtx.moveTo(margin.left + 10, margin.top + 12); taperCtx.lineTo(margin.left + 30, margin.top + 12); taperCtx.stroke();
+        taperCtx.beginPath(); taperCtx.arc(margin.left + 20, margin.top + 12, 4, 0, Math.PI * 2);
+        taperCtx.fillStyle = '#2c3e50'; taperCtx.fill();
+        taperCtx.fillStyle = '#555'; taperCtx.font = '11px sans-serif';
+        taperCtx.textAlign = 'left'; taperCtx.textBaseline = 'middle';
+        taperCtx.fillText('SERT Occupancy per Step', margin.left + 34, margin.top + 12);
+    }
+
+    // ─── COLLAPSIBLE PLAN SECTION ─────────────────────────────────────────────
+    function togglePlanSection() {
+        const body  = document.getElementById('planBody');
+        const arrow = document.getElementById('collapseArrow');
+        const isOpen = !body.hidden;
+        body.hidden = isOpen;
+        arrow.textContent = isOpen ? '▼' : '▲';
+        arrow.classList.toggle('open', !isOpen);
+    }
+
+    // ─── MULTI-COLUMN TABLE RENDERING ────────────────────────────────────────
+    const CHUNK = 20;
+
+    function renderMultiColumnTable(rows) {
+        const container = document.getElementById('tableColumns');
+        container.innerHTML = '';
+
+        const chunks = [];
+        for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
+
+        for (const chunk of chunks) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-col';
+
+            const tbl = document.createElement('table');
+            tbl.innerHTML = `
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">Step</th>
+                        <th>Dose (mg)</th>
+                        <th>RO (%)</th>
+                        <th>RO Drop</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = tbl.querySelector('tbody');
+            for (const row of chunk) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${row.step}</td>
+                    <td>${row.dose}</td>
+                    <td>${row.ro}</td>
+                    <td>${row.roDrop}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+            wrapper.appendChild(tbl);
+            container.appendChild(wrapper);
+        }
+    }
+
+    // ─── PDF DOWNLOAD ─────────────────────────────────────────────────────────
+    function downloadPDF() {
+        const chartImg = taperCanvas.toDataURL('image/png');
+
+        // Build table HTML for all rows across columns
+        const COLS_PER_ROW = Math.ceil(planRows.length / CHUNK);
+        const chunks = [];
+        for (let i = 0; i < planRows.length; i += CHUNK) chunks.push(planRows.slice(i, i + CHUNK));
+
+        const tableHTMLParts = chunks.map(chunk => {
+            const rows = chunk.map(r => `
+                <tr>
+                    <td style="text-align:center;">${r.step}</td>
+                    <td>${r.dose}</td>
+                    <td>${r.ro}</td>
+                    <td>${r.roDrop}</td>
+                </tr>
+            `).join('');
+            return `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Step</th><th>Dose (mg)</th><th>RO (%)</th><th>RO Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }).join('');
+
+        const win = window.open('', '_blank');
+        win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Taper Plan – ${planMeta.medName}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 28px; color: #222; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .meta { font-size: 13px; color: #555; margin-bottom: 18px; }
+        .guidance { font-size: 12px; font-style: italic; background: #fff9e6; border-left: 4px solid #f0c040;
+                    padding: 10px 14px; margin-bottom: 16px; border-radius: 3px; }
+        .tables { display: flex; flex-wrap: wrap; gap: 20px; }
+        table { border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 5px 9px; text-align: right; border-bottom: 1px solid #ddd; }
+        th { background: #f4f4f4; font-weight: 600; }
+        tr:nth-child(even) { background: #fafafa; }
+        .chart-img { max-width: 100%; margin-top: 24px; border: 1px solid #ddd; border-radius: 4px; }
+        .print-btn { margin-bottom: 16px; padding: 8px 16px; background: #3498db; color: white;
+                     border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        @media print { .print-btn { display: none; } body { margin: 12px; } }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <h1>SRI Taper Plan – ${planMeta.medName}</h1>
+    <div class="meta">
+        Starting dose: <strong>${planMeta.startDose} mg</strong> &nbsp;|&nbsp;
+        RO reduction per step: <strong>${planMeta.absDropRO} pp</strong> &nbsp;|&nbsp;
+        Total steps: <strong>${planRows.length}</strong>
+    </div>
+    <div class="guidance">
+        General guidance suggests each dose reduction should be maintained for at least 2–4 weeks before further reductions.
+        Withdrawal symptoms should resolve, or be mild, before moving to the next step.
+    </div>
+    <div class="tables">${tableHTMLParts}</div>
+    <img class="chart-img" src="${chartImg}" alt="Taper chart">
+</body>
+</html>`);
+        win.document.close();
+    }
+
+    // ─── UI HELPERS ───────────────────────────────────────────────────────────
+    function populateDropdown() {
+        const dropdown = document.getElementById('medDropdown');
+        for (const key in MED_DATA) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.text = MED_DATA[key].name;
+            dropdown.add(option);
+        }
+        dropdown.value = 'sertraline';
+        updateFromDropdown();
+    }
+
+    function updateFromDropdown() {
+        const key = document.getElementById('medDropdown').value;
+        document.getElementById('emax').value = MED_DATA[key].emax;
+        document.getElementById('ed50').value  = MED_DATA[key].ed50;
+        lastClickedDose = null;
+        clickInfo.innerHTML = '<span style="color:#999;">Click anywhere on the curve to read occupancy at that dose.</span><span></span>';
+        updateInstantCalc();
+    }
+
+    function toggleInputMode() {
+        const mode = document.querySelector('input[name="inputMode"]:checked').value;
+        const isManual = (mode === 'manual');
+        document.getElementById('emax').disabled = !isManual;
+        document.getElementById('ed50').disabled = !isManual;
+        const medContainer = document.getElementById('medSelectContainer');
+        medContainer.style.opacity = isManual ? '0.4' : '1';
+        medContainer.style.pointerEvents = isManual ? 'none' : 'auto';
+        if (!isManual) updateFromDropdown();
+        else updateInstantCalc();
+    }
+
+    function toggleCalibMode() {
+        const calibMode = document.querySelector('input[name="calibMode"]:checked').value;
+        document.getElementById('groupNextDose').style.display  = (calibMode === 'dose')    ? 'block' : 'none';
+        document.getElementById('groupRoDrop').style.display    = (calibMode === 'percent') ? 'block' : 'none';
+        document.getElementById('calcDoseRow').style.display    = (calibMode === 'percent') ? 'flex'  : 'none';
+        document.getElementById('nextRORow').style.display      = (calibMode === 'dose')    ? 'flex'  : 'none';
+        const header = document.getElementById('dynamicHeader');
+        if (calibMode === 'dose') {
+            header.innerText = "Enter your current starting dose and the first dose reduction that was previously tolerated without significant withdrawal symptoms.";
+        } else {
+            header.innerText = "Enter your current dose and the specific RO reduction (in percentage points) you want to achieve per step.";
+        }
+        updateInstantCalc();
+    }
+
+    function updateInstantCalc() {
+        const startDose = parseFloat(document.getElementById('startDose').value);
+        if (isNaN(startDose) || startDose < 0) {
+            document.getElementById('dispStartRO').innerText = '–';
+            document.getElementById('dispNextRO').innerText  = '–';
+            document.getElementById('dispDropMetric').innerText = '–';
+            refreshDoseOccCurve();
             return;
         }
-        errorDiv.style.display = 'none';
-
-        // Initialize Data Arrays
-        let stepsData = [];
-        let labels = [];
-        let concentrations = [];
-
-        // Initial State
-        let currentRO = getRO(startDose, emax, ed50);
-        let currentDose = startDose;
-        let current5HT = get5HT(currentRO);
-        
-        let stepCount = 0;
-
-        // Step 0
-        stepsData.push({
-            step: 0,
-            dose: currentDose,
-            ro: currentRO,
-            ht: current5HT,
-            deltaHt: 0 // No reduction at step 0
-        });
-        labels.push(0);
-        concentrations.push(current5HT);
-
-        // Calculation Loop
-        while (currentRO > 0.1) {
-            let previous5HT = current5HT; // Save previous concentration
-            
-            stepCount++;
-            
-            // Calculate target RO
-            let targetRO = stepsData[stepsData.length - 1].ro - deltaRO;
-            if (targetRO < 0) targetRO = 0;
-
-            // Calculate new values
-            let newDose = getDose(targetRO, emax, ed50);
-            let new5HT = get5HT(targetRO);
-            
-            // Calculate Absolute Reduction (Drop in 5-HT units)
-            let drop = previous5HT - new5HT; 
-            // Note: Since 5-HT goes DOWN, (Old - New) is positive drop.
-
-            // Update State
-            currentRO = targetRO;
-            currentDose = newDose;
-            current5HT = new5HT;
-
-            // Store Data
-            stepsData.push({
-                step: stepCount,
-                dose: newDose,
-                ro: currentRO,
-                ht: new5HT,
-                deltaHt: drop
-            });
-            labels.push(stepCount);
-            concentrations.push(new5HT);
-
-            if (stepCount > 200) break; // Safety break
-        }
-
-        // Update Table
-        const tbody = document.querySelector('#resultsTable tbody');
-        tbody.innerHTML = '';
-        
-        stepsData.forEach(data => {
-            let dropText = data.step === 0 ? "-" : data.deltaHt.toFixed(1);
-            let row = `<tr>
-                <td>${data.step}</td>
-                <td>${data.dose.toFixed(2)}</td>
-                <td>${data.ro.toFixed(2)}</td>
-                <td>${data.ht.toFixed(1)}%</td>
-                <td style="color: ${data.deltaHt > 10 ? '#e74c3c' : '#27ae60'}">${dropText}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
-
-        // --- Render Chart: Concentration Trajectory ---
-        const ctx1 = document.getElementById('concentrationChart').getContext('2d');
-        if (chartConcentration) chartConcentration.destroy();
-
-        chartConcentration = new Chart(ctx1, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '5-HT Concentration (% of Baseline)',
-                    data: concentrations,
-                    borderColor: '#000000',
-                    backgroundColor: 'rgba(128, 128, 128, 0.1)',
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#000000',
-                    pointBorderColor: '#000000',
-                    fill: true,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { 
-                        display: true, 
-                        text: 'Serotonin Trajectory',
-                        color: '#000000'
-                    },
-                    legend: {
-                        labels: {
-                            color: '#000000'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: { 
-                            label: (ctx) => `Concentration: ${ctx.parsed.y.toFixed(1)}%` 
-                        }
-                    }
-                },
-                scales: {
-                    x: { 
-                        title: { 
-                            display: true, 
-                            text: 'Step Number',
-                            color: '#000000'
-                        },
-                        ticks: {
-                            color: '#000000'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    },
-                    y: { 
-                        title: { 
-                            display: true, 
-                            text: '5-HT Concentration (% of Baseline)',
-                            color: '#000000'
-                        },
-                        ticks: {
-                            color: '#000000'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        suggestedMin: 100 
-                    }
-                }
+        const startRO = getRO(startDose);
+        document.getElementById('dispStartRO').innerText = isNaN(startRO) ? '–' : startRO.toFixed(2) + '%';
+        const calibMode = document.querySelector('input[name="calibMode"]:checked').value;
+        if (calibMode === 'dose') {
+            const nextDose = parseFloat(document.getElementById('nextDose').value);
+            if (!isNaN(nextDose) && nextDose >= 0) {
+                const nextRO = getRO(nextDose);
+                document.getElementById('dispNextRO').innerText = nextRO.toFixed(2) + '%';
+                document.getElementById('dispDropMetric').innerText = (startRO - nextRO).toFixed(2) + ' pp';
             }
-        });
+        } else {
+            const absDropRO = parseFloat(document.getElementById('desiredRoDrop').value);
+            if (!isNaN(absDropRO) && absDropRO > 0) {
+                const nextRO = Math.max(0, startRO - absDropRO);
+                const nextDoseCalc = getDoseFromRO(nextRO);
+                document.getElementById('dispCalcDose').innerText = isFinite(nextDoseCalc) ? nextDoseCalc.toFixed(2) + ' mg' : '–';
+                document.getElementById('dispDropMetric').innerText = absDropRO.toFixed(2) + ' pp';
+            }
+        }
+        refreshDoseOccCurve();
     }
+
+    // ─── MAIN GENERATOR ───────────────────────────────────────────────────────
+    function generatePlan() {
+        const errBox = document.getElementById('errorBox');
+        errBox.style.display = 'none';
+
+        try {
+            const startDose = parseFloat(document.getElementById('startDose').value);
+            const calibMode = document.querySelector('input[name="calibMode"]:checked').value;
+            if (isNaN(startDose) || startDose <= 0) throw new Error("Please enter a valid starting dose.");
+            const emax = parseFloat(document.getElementById('emax').value);
+            const ed50 = parseFloat(document.getElementById('ed50').value);
+            if (isNaN(emax) || isNaN(ed50)) throw new Error("Emax and ED50 must be set.");
+
+            const startRO = getRO(startDose);
+            let absDropRO;
+
+            if (calibMode === 'dose') {
+                const nextDoseInput = parseFloat(document.getElementById('nextDose').value);
+                if (isNaN(nextDoseInput) || nextDoseInput < 0) throw new Error("Please enter a valid next dose.");
+                if (nextDoseInput >= startDose) throw new Error("Next dose must be lower than starting dose.");
+                const nextRO = getRO(nextDoseInput);
+                if (nextRO >= startRO) throw new Error("Next dose must result in lower RO than starting dose.");
+                absDropRO = startRO - nextRO;
+            } else {
+                absDropRO = parseFloat(document.getElementById('desiredRoDrop').value);
+                if (isNaN(absDropRO) || absDropRO <= 0) throw new Error("Please enter a valid RO reduction (must be > 0).");
+                if (absDropRO >= startRO) throw new Error("RO reduction cannot exceed or equal starting RO.");
+            }
+
+            document.getElementById('dispStartRO').innerText = startRO.toFixed(2) + '%';
+            if (calibMode === 'dose') {
+                document.getElementById('dispNextRO').innerText = getRO(parseFloat(document.getElementById('nextDose').value)).toFixed(2) + '%';
+            }
+            if (calibMode === 'percent') {
+                const nextRO = startRO - absDropRO;
+                const nd = getDoseFromRO(nextRO);
+                document.getElementById('dispCalcDose').innerText = isFinite(nd) ? nd.toFixed(2) + ' mg' : '–';
+            }
+            document.getElementById('dispDropMetric').innerText = absDropRO.toFixed(2) + ' pp';
+
+            // Build rows
+            planRows = [];
+            const chartLabels = [], chartData = [];
+            let currentRO = startRO, prevRO = null, step = 1, safety = 0;
+
+            while (currentRO > 0.01 && safety < 2000) {
+                const dose = getDoseFromRO(currentRO);
+                const doseStr = !isFinite(dose) ? '–' : dose < 0.01 ? '~0' : dose.toFixed(2);
+                const roDropStr = prevRO !== null ? (prevRO - currentRO).toFixed(2) + ' pp' : '–';
+                planRows.push({ step, dose: doseStr, ro: currentRO.toFixed(2), roDrop: roDropStr });
+                chartLabels.push(step);
+                chartData.push(parseFloat(currentRO.toFixed(3)));
+                prevRO = currentRO;
+                currentRO -= absDropRO;
+                if (currentRO < 0.01) currentRO = 0;
+                step++; safety++;
+            }
+            const lastDrop = prevRO !== null ? prevRO.toFixed(2) + ' pp' : '–';
+            planRows.push({ step, dose: '0', ro: '0.00', roDrop: lastDrop });
+            chartLabels.push(step);
+            chartData.push(0);
+
+            // Store meta for PDF
+            const selKey = document.getElementById('medDropdown').value;
+            planMeta = {
+                medName: MED_DATA[selKey] ? MED_DATA[selKey].name : 'Manual',
+                startDose,
+                absDropRO: absDropRO.toFixed(2)
+            };
+
+            // Render
+            renderMultiColumnTable(planRows);
+            const planSection = document.getElementById('planSection');
+            planSection.hidden = false;
+            document.getElementById('planBody').hidden = false;
+            document.getElementById('collapseArrow').textContent = '▲';
+            document.getElementById('collapseArrow').classList.add('open');
+
+            drawTaperChart(chartLabels, chartData);
+            refreshDoseOccCurve();
+
+        } catch (err) {
+            errBox.innerText = err.message;
+            errBox.style.display = 'block';
+        }
+    }
+
+    // ─── RESIZE ───────────────────────────────────────────────────────────────
+    window.addEventListener('resize', () => refreshDoseOccCurve());
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+    populateDropdown();
+    toggleInputMode();
+    toggleCalibMode();
 </script>
 
 </body>
